@@ -49,8 +49,13 @@ Before install and run the project you will need:
 To use the operations from Java Math library, you have to write the command and the values. For example: abs(-50) max(50,100) . To use the bubble sort algorithm, change the command to bbl. For example, bbl(100,50,25,10,1).
 
 
+![image](https://github.com/user-attachments/assets/64156403-de5f-415b-bed1-497ac618ed44)
 
 
+![image](https://github.com/user-attachments/assets/bccc6a2b-db33-4222-a588-7b753e5690d3)
+
+
+![image](https://github.com/user-attachments/assets/c32e9ce1-8ea1-418c-b4e2-454603901f2d)
 
 
 ## Author
