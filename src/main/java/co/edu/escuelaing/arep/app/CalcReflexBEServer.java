@@ -1,66 +1,66 @@
 package co.edu.escuelaing.arep.app;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
+import java.io.*;
+import java.util.Arrays;
 
 public class CalcReflexBEServer {
-    public static void main(String[] args) throws IOException, URISyntaxException {
+    public static void main(String[] args) throws IOException, URISyntaxException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         ServerSocket serverSocket = null;
-
+        boolean running = true;
         try {
-            serverSocket = new ServerSocket(35000);
+            serverSocket = new ServerSocket(36000);
         } catch (IOException e) {
-            System.err.println("Could not listen on port: 35000.");
+            System.err.println("Could not listen on port: 36000.");
             System.exit(1);
         }
-        boolean running = true;
-        while(running) {
 
-
+        while(running){
             Socket clientSocket = null;
             try {
-                System.out.println("Listo para recibir ...");
+                System.out.println("Listo para recibir 36000 ...");
                 clientSocket = serverSocket.accept();
             } catch (IOException e) {
                 System.err.println("Accept failed.");
                 System.exit(1);
             }
-
             PrintWriter out = new PrintWriter(
                     clientSocket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream()));
             String inputLine, outputLine;
-            boolean isFirstline = true;
-            String firstLine="";
+            boolean isFirstLine = true;
+            String firstLine = "";
             while ((inputLine = in.readLine()) != null) {
                 System.out.println("Recibí: " + inputLine);
                 //Sacando la primera linea con el metodo del encabezado
-                if (isFirstline){
+                if (isFirstLine){
                     firstLine = inputLine;
-                    isFirstline = false;
+                    isFirstLine = false;
                 }
-                if (!in.ready()) {
-                    break;
-                }
+                if (!in.ready()) {break; }
             }
-
-            URI requri = getReqURI(firstLine);
-
-            if(requri.getPath().startsWith("/compreflex")){
+            URI reqURL = getRequestURL(firstLine);
+            if (reqURL.getPath().startsWith("/compreFlex")){
+                String query = reqURL.getQuery().split("=")[1];
+                String command = query.substring(0,query.lastIndexOf("("));
+                String[] values =query.substring(query.lastIndexOf("(")+1,query.lastIndexOf(")")).split(",");
+                System.out.println(query);
+                String response;
+                if (command.equals("bbl")){
+                    response = Arrays.toString(bubbleSort(values));
+                }else {
+                    response = computeMathCommand(command, values );
+                }
                 outputLine = "HTTP/1.1 200 OK\r\n"
                         + "Content-Type: application/json\r\n"
                         + "\r\n"
-                        + "'{\"name\":\"John\", \"age\":30, \"car\":null}'";
+                        + "'{\"result\":"+response+"}'";
             }else {
-                outputLine =getDefaultResponse();
+                outputLine = getDefaultResponse();
             }
-
 
             out.println(outputLine);
             out.close();
@@ -68,42 +68,81 @@ public class CalcReflexBEServer {
             clientSocket.close();
         }
         serverSocket.close();
-
     }
 
-    public static String getDefaultResponse(){
-        String htmlCode= "HTTP/1.1 200 OK\r\n"
+
+    private static URI getRequestURL(String firstLine) throws URISyntaxException {
+        String url = firstLine.split(" ")[1];
+        return new URI(url);
+    }
+
+
+    private static String getDefaultResponse(){
+        return "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: text/html\r\n"
                 + "\r\n"
-                +"<!DOCTYPE html>\n" +
-                "<html>\n" +
-                "    <head>\n" +
-                "        <title>Form Example</title>\n" +
-                "        <meta charset=\"UTF-8\">\n" +
-                "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-                "    </head>\n" +
-                "    <body>\n" +
-                "        <h1>Method not found</h1>\n" +
-                "    </body>\n" +
-                "</html>";
-        return htmlCode;
+                + "<!DOCTYPE html>\n"
+                + "<html>\n"
+                + "<head>\n"
+                + "<meta charset=\"UTF-8\">\n"
+                + "<title>Title of the document</title>\n"
+                + "</head>\n"
+                + "<body>\n"
+                + "<h1>Method Not Found</h1>\n"
+                + "</body>\n"
+                + "</html>\n";
     }
 
-    public static URI getReqURI(String firstline) throws URISyntaxException {
 
-        String ruri = firstline.split(" ")[1];
-
-        return new URI(ruri);
-
+    public static String computeMathCommand(String command,String[] values)  {
+        Class<?> c = Math.class;
+        Class[] parameterTypes;
+        Object[] params;
+        if (values.length < 1 || values.length > 3) {
+            return "Values exceed";
+        }else if (values.length == 3){
+            parameterTypes = new Class[]{double.class, double.class,double.class};
+            params = new Object[]{Double.parseDouble(values[0]), Double.parseDouble(values[1]), Double.parseDouble(values[2])};
+        } else if (values.length == 2) {
+            parameterTypes = new Class[]{double.class, double.class};
+            params = new Object[]{Double.parseDouble(values[0]), Double.parseDouble(values[1])};
+        } else {
+            parameterTypes = new Class[]{double.class};
+            params = new Object[]{Double.parseDouble(values[0])};
+        }
+        Method m = null;
+        try {
+            m = c.getDeclaredMethod(command, parameterTypes);
+        } catch (NoSuchMethodException e) {
+            return "Method not Found";
+        }
+        try {
+            return m.invoke(null,params).toString();
+        } catch (IllegalAccessException e) {
+            return e.getCause().toString();
+        } catch (InvocationTargetException e) {
+            return e.getCause().toString();
+        }
     }
 
-    public static  String  computeMathCommand(String command) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Class c = Math.class;
-        Class [] parameterTypes = {double.class};
-        Method m = c.getDeclaredMethod("abs", parameterTypes);
-        Object [] params = {-2.0};
+    public static String[] bubbleSort(String[] arr) {
+        int n = arr.length;
+        boolean swapped;
 
-        String resp = m.invoke(null, (Object) params).toString();
-        return "";
+        for (int i = 0; i < n - 1; i++) {
+            swapped = false;
+            for (int j = 0; j < n - i - 1; j++) {
+                if (Integer.parseInt(arr[j]) > Integer.parseInt(arr[j + 1])) {
+                    String temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                    swapped = true;
+                }
+            }
+            if (!swapped)
+                break;
+        }
+        return arr;
     }
+
 }

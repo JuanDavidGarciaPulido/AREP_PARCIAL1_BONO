@@ -6,69 +6,68 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
 
-
 public class CalcReflexFacade {
     public static void main(String[] args) throws IOException, URISyntaxException {
         ServerSocket serverSocket = null;
+        boolean running = true;
 
         try {
-            serverSocket = new ServerSocket(36000);
+            serverSocket = new ServerSocket(35000);
         } catch (IOException e) {
             System.err.println("Could not listen on port: 35000.");
             System.exit(1);
         }
-        boolean running = true;
-        while(running) {
-
-
+        while(running){
             Socket clientSocket = null;
             try {
-                System.out.println("Listo para recibir ...");
+                System.out.println("Listo para recibir 35000 ...");
                 clientSocket = serverSocket.accept();
             } catch (IOException e) {
                 System.err.println("Accept failed.");
                 System.exit(1);
             }
-
             PrintWriter out = new PrintWriter(
                     clientSocket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream()));
             String inputLine, outputLine;
-            boolean isFirstline = true;
-            String firstLine="";
+            boolean isFirstLine = true;
+            String firstLine = "";
             while ((inputLine = in.readLine()) != null) {
                 System.out.println("Recibí: " + inputLine);
-                //Sacando la primera linea con el metodo del encabezado
-                if (isFirstline){
+
+                if (isFirstLine){
                     firstLine = inputLine;
-                    isFirstline = false;
+                    isFirstLine = false;
                 }
-                if (!in.ready()) {
-                    break;
-                }
+                if (!in.ready()) {break; }
             }
-
-            URI requery = getReqURI(firstLine);
-
-            if(requery.getPath().startsWith("/computar")){
-                outputLine = HttpConnectionExample.getResponse("/compreflex?" + requery.getQuery());
+            URI reqURL = getRequestURL(firstLine);
+            if (reqURL.getPath().startsWith("/computar")){
+                String response = HttpConnectionExample.getResponse("/compreFlex?" + reqURL.getQuery());
+                outputLine = getOkResponse(response);
             }else {
-                outputLine =gethtmlClient();
+                outputLine = htmlClient();
             }
-
-
             out.println(outputLine);
             out.close();
             in.close();
             clientSocket.close();
         }
         serverSocket.close();
-
     }
 
-    public static String gethtmlClient(){
-        String htmlCode= "HTTP/1.1 200 OK\r\n"
+
+    private static String getOkResponse(String data){
+        return "HTTP/1.1 200 OK\r\n"
+                + "Content-Type: text/html\r\n"
+                + "\r\n"
+                + data;
+    }
+
+
+    public static String htmlClient(){
+        String htmlCode = "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: text/html\r\n"
                 + "\r\n"
                 +"<!DOCTYPE html>\n" +
@@ -81,15 +80,15 @@ public class CalcReflexFacade {
                 "    <body>\n" +
                 "        <h1>Form with GET</h1>\n" +
                 "        <form action=\"/hello\">\n" +
-                "            <label for=\"name\">Name:</label><br>\n" +
-                "            <input type=\"text\" id=\"comando\" name=\"comando\" value=\"max(1,0,2.0)\"><br><br>\n" +
+                "            <label for=\"name\">Operation:</label><br>\n" +
+                "            <input type=\"text\" id=\"name\" name=\"name\"><br><br>\n" +
                 "            <input type=\"button\" value=\"Submit\" onclick=\"loadGetMsg()\">\n" +
                 "        </form> \n" +
                 "        <div id=\"getrespmsg\"></div>\n" +
                 "\n" +
                 "        <script>\n" +
                 "            function loadGetMsg() {\n" +
-                "                let nameVar = document.getElementById(\"comando\").value;\n" +
+                "                let nameVar = document.getElementById(\"name\").value;\n" +
                 "                const xhttp = new XMLHttpRequest();\n" +
                 "                xhttp.onload = function() {\n" +
                 "                    document.getElementById(\"getrespmsg\").innerHTML =\n" +
@@ -99,17 +98,13 @@ public class CalcReflexFacade {
                 "                xhttp.send();\n" +
                 "            }\n" +
                 "        </script>\n" +
-
                 "    </body>\n" +
                 "</html>";
         return htmlCode;
     }
 
-    public static URI getReqURI(String firstline) throws URISyntaxException {
-
-        String ruri = firstline.split(" ")[1];
-
-        return new URI(ruri);
-
+    private static URI getRequestURL(String firstLine) throws URISyntaxException {
+        String url = firstLine.split(" ")[1];
+        return new URI(url);
     }
 }
