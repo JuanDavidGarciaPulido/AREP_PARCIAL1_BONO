@@ -1,4 +1,4 @@
-package org.example;
+package co.edu.escuelaing.arep.app;
 
 import java.io.BufferedReader;
 import java.io.IOException;

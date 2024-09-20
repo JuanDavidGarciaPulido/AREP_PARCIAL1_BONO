@@ -1,19 +1,18 @@
-package org.example;
+package co.edu.escuelaing.arep.app;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.*;
 
-public class CalcReflexBEServer {
+
+public class CalcReflexFacade {
     public static void main(String[] args) throws IOException, URISyntaxException {
         ServerSocket serverSocket = null;
 
         try {
-            serverSocket = new ServerSocket(35000);
+            serverSocket = new ServerSocket(36000);
         } catch (IOException e) {
             System.err.println("Could not listen on port: 35000.");
             System.exit(1);
@@ -50,15 +49,12 @@ public class CalcReflexBEServer {
                 }
             }
 
-            URI requri = getReqURI(firstLine);
+            URI requery = getReqURI(firstLine);
 
-            if(requri.getPath().startsWith("/compreflex")){
-                outputLine = "HTTP/1.1 200 OK\r\n"
-                        + "Content-Type: application/json\r\n"
-                        + "\r\n"
-                        + "'{\"name\":\"John\", \"age\":30, \"car\":null}'";
+            if(requery.getPath().startsWith("/computar")){
+                outputLine = HttpConnectionExample.getResponse("/compreflex?" + requery.getQuery());
             }else {
-                outputLine =getDefaultResponse();
+                outputLine =gethtmlClient();
             }
 
 
@@ -71,7 +67,7 @@ public class CalcReflexBEServer {
 
     }
 
-    public static String getDefaultResponse(){
+    public static String gethtmlClient(){
         String htmlCode= "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: text/html\r\n"
                 + "\r\n"
@@ -83,7 +79,27 @@ public class CalcReflexBEServer {
                 "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
                 "    </head>\n" +
                 "    <body>\n" +
-                "        <h1>Method not found</h1>\n" +
+                "        <h1>Form with GET</h1>\n" +
+                "        <form action=\"/hello\">\n" +
+                "            <label for=\"name\">Name:</label><br>\n" +
+                "            <input type=\"text\" id=\"comando\" name=\"comando\" value=\"max(1,0,2.0)\"><br><br>\n" +
+                "            <input type=\"button\" value=\"Submit\" onclick=\"loadGetMsg()\">\n" +
+                "        </form> \n" +
+                "        <div id=\"getrespmsg\"></div>\n" +
+                "\n" +
+                "        <script>\n" +
+                "            function loadGetMsg() {\n" +
+                "                let nameVar = document.getElementById(\"comando\").value;\n" +
+                "                const xhttp = new XMLHttpRequest();\n" +
+                "                xhttp.onload = function() {\n" +
+                "                    document.getElementById(\"getrespmsg\").innerHTML =\n" +
+                "                    this.responseText;\n" +
+                "                }\n" +
+                "                xhttp.open(\"GET\", \"/computar?comando=\"+nameVar);\n" +
+                "                xhttp.send();\n" +
+                "            }\n" +
+                "        </script>\n" +
+
                 "    </body>\n" +
                 "</html>";
         return htmlCode;
@@ -95,15 +111,5 @@ public class CalcReflexBEServer {
 
         return new URI(ruri);
 
-    }
-
-    public static  String  computeMathCommand(String command) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Class c = Math.class;
-        Class [] parameterTypes = {double.class};
-        Method m = c.getDeclaredMethod("abs", parameterTypes);
-        Object [] params = {-2.0};
-
-        String resp = m.invoke(null, (Object) params).toString();
-        return "";
     }
 }
